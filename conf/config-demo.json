@@ -1,0 +1,52 @@
+{
+  "email":"youremail@gmail.com",
+  "providers": [
+    {
+      "name": "aliyun",
+      "ak": "${ALIYUN_AK | AKID*********************}",
+      "sk":  "${ALIYUN_SK | qYzV*********************}"
+    },
+    {
+      "name": "tencent",
+      "ak":  "${TENCENT_AK | AKID*********************}",
+      "sk":  "${TENCENT_SK | qYzV*********************}"
+    },
+    {
+      "name":"cloudflare",
+      "ak":"${CLOUD_FLARE_MAIL | xxx@xxx.com}",
+      "sk":"${CLOUD_FLARE_KEY | qYzV*********************}"
+    }
+  ],
+  "hosts": [
+    {
+      "name": "test.example.com",
+      "provider": "tencent",
+      "exptime": "2024-12-31",
+      "savepath": "/etc/ssl/test.example.com/",
+      "deploy_to":[
+        "txcloud"
+      ]
+    },
+    {
+      "name": "test.com",
+      "provider": "aliyun",
+      "exptime": "2021-12-12",
+      "savepath": "/etc/ssl/test.com"
+    },
+    {
+      "name": "test.com",
+      "provider": "aliyun222",
+      "exptime": "2021-12-12",
+      "savepath": "/etc/ssl/test.com"
+    },
+    {
+      "name": "test.com",
+      "provider": "aliyun222",
+      "exptime": "2021-12-12",
+      "savepath": "/etc/ssl/test.com"
+    }
+  ],
+  "wx_notify":"https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxx-xxxx-xxxx-xxxx",
+  "reload_script": "/etc/init.d/nginx reload",
+  "expire_days": 15
+}

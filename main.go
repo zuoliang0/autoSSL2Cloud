@@ -17,16 +17,22 @@ var appConfig *conf.AppConfig
 
 func main() {
 	appConfig = conf.InitConfig()
-	// Check and update SSL certificates
+	// // Check and update SSL certificates
 	checkSSLUpdate()
 }
 
 func checkSSLUpdate() {
 	var updateCount int = 0
 	var updatedHosts []string
-	for _, host := range appConfig.Hosts {
+	for i := range appConfig.Hosts {
+		host := &appConfig.Hosts[i]
 		// 检查证书是否过期
-		if host.Exptime.Before(time.Now().AddDate(0, 0, appConfig.ExpireDays)) {
+		t, err := time.Parse("2006-01-02", host.Exptime)
+		if err != nil {
+			log.Printf("parse host %s ssl cert expire time failed: %v\n", host.Name, err)
+			continue
+		}
+		if t.Before(time.Now().AddDate(0, 0, appConfig.ExpireDays)) {
 			// 证书过期，更新证书
 			log.Printf("host %s ssl cert is expired, update it\n", host.Name)
 			provider, err := providers.GetProvider(host.Provider, appConfig)
@@ -35,7 +41,11 @@ func checkSSLUpdate() {
 				continue
 			}
 			var ctx = context.Background()
-			provider.UpdateSSL(ctx, host)
+			err = provider.UpdateSSL(ctx, host)
+			if err != nil {
+				log.Printf("update host %s ssl cert failed: %v\n", host.Name, err)
+				continue
+			}
 			updateCount++
 			updatedHosts = append(updatedHosts, host.Name)
 		}
@@ -56,7 +66,7 @@ func sendQYWXAlert(updatedHosts []string) {
 	if appConfig.WxNotify == nil || len(updatedHosts) == 0 {
 		return
 	}
-	message := fmt.Sprintf("共更新<font color=\"warning\">%d</font>个域名。\n%s", len(updatedHosts), strings.Join(updatedHosts, "\n"))
+	message := fmt.Sprintf(`共更新<font color='warning'>%d</font>个域名。\n%s`, len(updatedHosts), strings.Join(updatedHosts, "\n"))
 	payload := fmt.Sprintf(`{"msgtype": "markdown", "markdown": {"content": "%s"}}`, message)
 	req, err := http.NewRequest("POST", *appConfig.WxNotify, strings.NewReader(payload))
 	if err != nil {
@@ -84,8 +94,16 @@ func sendQYWXAlert(updatedHosts []string) {
 func reloadLocalNginxConfig() {
 	// 更新本地Nginx配置
 	if appConfig.ReloadScript != nil {
-		log.Println("reload nginx config" + *appConfig.ReloadScript)
-		cmd := exec.Command("sh", *appConfig.ReloadScript)
+		log.Println("reload nginx config " + *appConfig.ReloadScript)
+		// 解析命令字符串
+		args := strings.Fields(*appConfig.ReloadScript)
+		if len(args) == 0 {
+			fmt.Println("Error: no command provided")
+			return
+		}
+
+		// 第一个字段是命令，剩下的是参数
+		cmd := exec.Command(args[0], args[1:]...)
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			log.Printf("failed to reload nginx config: %v\n", err)

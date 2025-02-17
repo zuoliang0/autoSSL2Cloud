@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	"github.com/gookit/config/v2"
 )
@@ -14,19 +13,19 @@ type AppConfig struct {
 	Providers    []Provider `json:"providers"`
 	Email        string     `json:"email"` //注册let's encrypt的邮箱
 	Hosts        []Host     `json:"hosts"`
-	WxNotify     *string    `json:"wx_notify"` //企业微信通知URL
-	ReloadScript *string    `json:"reload_script"`
-	ExpireDays   int        `json:"expire_days"` //证书还剩多少天自动更新 默认15天
+	WxNotify     *string    `mapstructure:"wx_notify" json:"wx_notify"` //企业微信通知URL
+	ReloadScript *string    `mapstructure:"reload_script" json:"reload_script"`
+	ExpireDays   int        `mapstructure:"expire_days" json:"expire_days"` //证书还剩多少天自动更新 默认15天
 }
 
 type Host struct {
-	Name      string    `json:"name"`        //域名
-	Provider  string    `json:"provider"`    //云服务商
-	AliCertId string    `json:"ali_cert_id"` //证书ID 当前证书在阿里云的ID 如果不存在则不做更新，只上传到阿里云
-	TxCertId  *string   `json:"tx_cert_id"`  //证书ID 当前证书在腾讯云的ID 如果不存在则不做更新，只上传到腾讯云
-	Exptime   time.Time `json:"exptime"`     //证书过期时间
-	SavePath  string    `json:"savepath"`    //SSL证书保存路径
-	DeployTo  []string  `json:"deploy_to"`   //部署到哪些服务器 tenxunCloud,aliyun
+	Name      string   `json:"name"`                                   //域名
+	Provider  string   `json:"provider"`                               //云服务商
+	AliCertId string   `mapstructure:"ali_cert_id" json:"ali_cert_id"` //证书ID 当前证书在阿里云的ID 如果不存在则不做更新，只上传到阿里云
+	TxCertId  *string  `mapstructure:"tx_cert_id" json:"tx_cert_id"`   //证书ID 当前证书在腾讯云的ID 如果不存在则不做更新，只上传到腾讯云
+	Exptime   string   `mapstructure:"exptime" json:"exptime"`         //证书过期时间
+	SavePath  string   `json:"savepath"`                               //SSL证书保存路径
+	DeployTo  []string `mapstructure:"deploy_to" json:"deploy_to"`     //部署到哪些服务器 tenxunCloud,aliyun
 }
 
 type Provider struct {

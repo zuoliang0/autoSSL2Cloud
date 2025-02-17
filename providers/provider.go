@@ -29,6 +29,7 @@ func GetProvider(providerName string, appConfig *conf.AppConfig) (BaseProvider, 
 				case "aliyun":
 					pp, err := NewAliyunProvider(p, appConfig)
 					if err != nil {
+						log.Println(err)
 						return nil, err
 					}
 					providMap[p.Name] = pp
@@ -36,6 +37,7 @@ func GetProvider(providerName string, appConfig *conf.AppConfig) (BaseProvider, 
 				case "txcloud":
 					pp, err := NewTXProvider(p, appConfig)
 					if err != nil {
+						log.Println(err)
 						return nil, err
 					}
 					providMap[p.Name] = pp
@@ -46,35 +48,47 @@ func GetProvider(providerName string, appConfig *conf.AppConfig) (BaseProvider, 
 			return providMap[p.Name], nil
 		}
 	}
+	log.Println("域名配置" + providerName + " provider在providers配置中不存在")
 	return nil, errors.New("provider not found")
 }
 
 type BaseProvider interface {
-	UpdateSSL(ctx context.Context, host conf.Host) error
+	UpdateSSL(ctx context.Context, host *conf.Host) error
 	DeployToCloud(ctx context.Context, host conf.Host, key, cert *string) error
 }
 
-func DeployCertificates(ctx context.Context, host conf.Host, appConfig *conf.AppConfig, key, cert string) error {
+func DeployCertificates(ctx context.Context, host *conf.Host, appConfig *conf.AppConfig, key, cert string) error {
+	var depCount int = 0
 	for _, deployTo := range host.DeployTo {
 		switch deployTo {
 		case "aliyun":
 			// 部署到阿里云 todo
 			aly, _ := GetProvider("aliyun", appConfig)
 			if aly != nil {
-				return aly.DeployToCloud(ctx, host, &key, &cert)
+				err := aly.DeployToCloud(ctx, *host, &key, &cert)
+				if err != nil {
+					log.Println(err)
+					return err
+				}
+				depCount++
 			}
 
 		case "txcloud":
 			// 部署到腾讯云
 			tx, _ := GetProvider("txcloud", appConfig)
-			return tx.DeployToCloud(ctx, host, &key, &cert)
+			err := tx.DeployToCloud(ctx, *host, &key, &cert)
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+			depCount++
 		}
-
 	}
+	log.Printf("deploy %d hosts ssl cert\n", depCount)
 	return nil
 }
 
-func ApplySSL(ctx context.Context, chp challenge.Provider, email string, host conf.Host) (cert, key string, err error) {
+func ApplySSL(ctx context.Context, chp challenge.Provider, email string, host *conf.Host) (cert, key string, err error) {
 	// 申请证书
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {

@@ -34,23 +34,22 @@ func NewTXProvider(pro conf.Provider, appConfig *conf.AppConfig) (*TXProvider, e
 	return &TXProvider{pro: pro, chp: p, appConfig: appConfig}, nil
 
 }
-func (p *TXProvider) UpdateSSL(ctx context.Context, host conf.Host) error {
+func (p *TXProvider) UpdateSSL(ctx context.Context, host *conf.Host) error {
 	return p.ApplySSL(ctx, host)
 }
 
 // 第一步申请证书
-func (p *TXProvider) ApplySSL(ctx context.Context, host conf.Host) (err error) {
+func (p *TXProvider) ApplySSL(ctx context.Context, host *conf.Host) (err error) {
 	// 申请证书
 	cert, key, err := ApplySSL(ctx, p.chp, p.appConfig.Email, host)
 	if err != nil {
 		return err
 	}
 	// 过期时间是当前日期加上90天
-	host.Exptime = time.Now().AddDate(0, 0, 90)
-	expTime := host.Exptime.Format("2006-01-02")
+	host.Exptime = time.Now().AddDate(0, 0, 90).Format("2006-01-02")
+	expTime := host.Exptime
 	log.Println("证书过期时间为" + expTime)
-	err = DeployCertificates(ctx, host, p.appConfig, key, cert)
-	return err
+	return DeployCertificates(ctx, host, p.appConfig, key, cert)
 }
 
 // 第二步更新证书 todo
@@ -77,7 +76,7 @@ func (p *TXProvider) DeployToCloud(ctx context.Context, host conf.Host, priKey, 
 	request.CertificatePrivateKey = priKey
 	request.CertificateType = &certType
 	//alias 名称 host + 今天日期+ 过期时间
-	expTime := host.Exptime.Format("2006-01-02")
+	expTime := host.Exptime
 	request.Alias = common.StringPtr(host.Name + "_Exp_" + expTime)
 	log.Println("开始上传" + host.Name + "的SSL证书到腾讯云" + "有效期至" + expTime)
 	// 返回的resp是一个UploadCertificateResponse的实例，与请求对象对应
@@ -116,9 +115,11 @@ func (p *TXProvider) DeployToCloud(ctx context.Context, host conf.Host, priKey, 
 		common.StringPtr("tse"),
 		common.StringPtr("cos"),
 	}
-
+	log.Printf("重新部署证书时参数: OldCertificateId=%s, CertificateId=%s, ResourceTypes=%v \n",
+		*updateSSLRequest.OldCertificateId, *updateSSLRequest.CertificateId, updateSSLRequest.ResourceTypes)
 	// 返回的resp是一个UpdateCertificateInstanceResponse的实例，与请求对象对应
 	updateResponse, err := client.UpdateCertificateInstance(updateSSLRequest)
+	host.TxCertId = response.Response.CertificateId //更新证书ID
 	if _, ok := err.(*errors.TencentCloudSDKError); ok {
 		fmt.Printf("An API error has returned: %s", err)
 		return err
@@ -127,6 +128,6 @@ func (p *TXProvider) DeployToCloud(ctx context.Context, host conf.Host, priKey, 
 		panic(err)
 	}
 	// 输出json格式的字符串回包
-	fmt.Printf("%s", updateResponse.ToJsonString())
+	fmt.Printf("%s \n", updateResponse.ToJsonString())
 	return nil
 }

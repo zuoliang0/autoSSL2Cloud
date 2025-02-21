@@ -115,6 +115,41 @@ func (p *TXProvider) DeployToCloud(ctx context.Context, host conf.Host, priKey, 
 		common.StringPtr("tse"),
 		common.StringPtr("cos"),
 	}
+	// Define the regions array
+	regions := []*string{
+		common.StringPtr("ap-guangzhou"),
+		common.StringPtr("ap-shanghai"),
+		common.StringPtr("ap-beijing"),
+		common.StringPtr("ap-hongkong"),
+		common.StringPtr("ap-singapore"),
+		common.StringPtr("na-siliconvalley"),
+		common.StringPtr("eu-frankfurt"),
+		common.StringPtr("na-ashburn"),
+		common.StringPtr("ap-bangkok"),
+		common.StringPtr("ap-tokyo"),
+		common.StringPtr("ap-nanjing"),
+		common.StringPtr("ap-jakarta"),
+		common.StringPtr("sa-saopaulo"),
+		common.StringPtr("ap-chongqing"),
+		common.StringPtr("ap-seoul"),
+	}
+
+	// 更新常用产品的所有可用区的证书
+	updateSSLRequest.ResourceTypesRegions = []*ssl.ResourceTypeRegions{
+		{ResourceType: common.StringPtr("clb"), Regions: regions},
+		{ResourceType: common.StringPtr("cdn"), Regions: regions},
+		{ResourceType: common.StringPtr("waf"), Regions: regions},
+		{ResourceType: common.StringPtr("live"), Regions: regions},
+		{ResourceType: common.StringPtr("ddos"), Regions: regions},
+		{ResourceType: common.StringPtr("teo"), Regions: regions},
+		{ResourceType: common.StringPtr("apigateway"), Regions: regions},
+		{ResourceType: common.StringPtr("vod"), Regions: regions},
+		{ResourceType: common.StringPtr("tke"), Regions: regions},
+		{ResourceType: common.StringPtr("tcb"), Regions: regions},
+		{ResourceType: common.StringPtr("tse"), Regions: regions},
+		{ResourceType: common.StringPtr("cos"), Regions: regions},
+	}
+
 	log.Printf("重新部署证书时参数: OldCertificateId=%s, CertificateId=%s, ResourceTypes=%v \n",
 		*updateSSLRequest.OldCertificateId, *updateSSLRequest.CertificateId, updateSSLRequest.ResourceTypes)
 	// 返回的resp是一个UpdateCertificateInstanceResponse的实例，与请求对象对应

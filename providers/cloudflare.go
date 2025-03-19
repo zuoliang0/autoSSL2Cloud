@@ -17,6 +17,11 @@ type CFProvider struct {
 	appConfig *conf.AppConfig
 }
 
+func (p *CFProvider) DeployToCloud(ctx context.Context, host conf.Host, key, cert *string) error {
+	//无需实现
+	return nil
+}
+
 func NewCFProvider(pro conf.Provider, appConfig *conf.AppConfig) (*CFProvider, error) {
 	cfg := cloudflare.NewDefaultConfig()
 	cfg.AuthEmail = pro.AK

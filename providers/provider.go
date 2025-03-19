@@ -22,30 +22,37 @@ import (
 var providMap = map[string]BaseProvider{}
 
 func GetProvider(providerName string, appConfig *conf.AppConfig) (BaseProvider, error) {
+	if prod, ok := providMap[providerName]; ok {
+		return prod, nil
+	}
 	for _, p := range appConfig.Providers {
-		if _, ok := providMap[p.Name]; !ok {
-			if p.Name == providerName {
-				switch providerName {
-				case "aliyun":
-					pp, err := NewAliyunProvider(p, appConfig)
-					if err != nil {
-						log.Println(err)
-						return nil, err
-					}
-					providMap[p.Name] = pp
-					return pp, nil
-				case "txcloud":
-					pp, err := NewTXProvider(p, appConfig)
-					if err != nil {
-						log.Println(err)
-						return nil, err
-					}
-					providMap[p.Name] = pp
-					return pp, nil
+		if p.Name == providerName {
+			switch providerName {
+			case "aliyun":
+				pp, err := NewAliyunProvider(p, appConfig)
+				if err != nil {
+					log.Println(err)
+					return nil, err
 				}
+				providMap[p.Name] = pp
+				return pp, nil
+			case "tencent":
+				pp, err := NewTXProvider(p, appConfig)
+				if err != nil {
+					log.Println(err)
+					return nil, err
+				}
+				providMap[p.Name] = pp
+				return pp, nil
+			case "cloudflare":
+				pp, err := NewCFProvider(p, appConfig)
+				if err != nil {
+					log.Println(err)
+					return nil, err
+				}
+				providMap[p.Name] = pp
+				return pp, nil
 			}
-		} else {
-			return providMap[p.Name], nil
 		}
 	}
 	log.Println("域名配置" + providerName + " provider在providers配置中不存在")
@@ -75,7 +82,16 @@ func DeployCertificates(ctx context.Context, host *conf.Host, appConfig *conf.Ap
 
 		case "txcloud":
 			// 部署到腾讯云
-			tx, _ := GetProvider("txcloud", appConfig)
+			tx, _ := GetProvider("tencent", appConfig)
+			err := tx.DeployToCloud(ctx, *host, &key, &cert)
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+			depCount++
+		case "tencent":
+			// 部署到腾讯云
+			tx, _ := GetProvider("tencent", appConfig)
 			err := tx.DeployToCloud(ctx, *host, &key, &cert)
 			if err != nil {
 				log.Println(err)
@@ -92,7 +108,7 @@ func ApplySSL(ctx context.Context, chp challenge.Provider, email string, host *c
 	// 申请证书
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		log.Fatal(err)
+		return "", "", err
 	}
 	myUser := MyUser{
 		Email: email,
@@ -102,17 +118,17 @@ func ApplySSL(ctx context.Context, chp challenge.Provider, email string, host *c
 	config.Certificate.KeyType = certcrypto.RSA2048
 	client, err := lego.NewClient(config)
 	if err != nil {
-		log.Fatal(err)
+		return "", "", err
 	}
 
 	err = client.Challenge.SetDNS01Provider(chp)
 	if err != nil {
-		log.Fatal(err)
+		return "", "", err
 	}
 
 	reg, err := client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
 	if err != nil {
-		log.Fatal(err)
+		return "", "", err
 	}
 	myUser.Registration = reg
 	var domains = []string{host.Name}
@@ -126,7 +142,7 @@ func ApplySSL(ctx context.Context, chp challenge.Provider, email string, host *c
 	// 申请证书
 	certificates, err := client.Certificate.Obtain(request)
 	if err != nil {
-		log.Fatal(err)
+		return "", "", err
 	}
 	log.Printf("%#v\n", certificates)
 	var domain = host.Name

@@ -34,12 +34,12 @@ func checkSSLUpdate() {
 		}
 		if t.Before(time.Now().AddDate(0, 0, appConfig.ExpireDays)) {
 			// 证书过期，更新证书
-			log.Printf("host %s ssl cert is expired, update it\n", host.Name)
 			provider, err := providers.GetProvider(host.Provider, appConfig)
 			if err != nil {
-				log.Printf("get provider %s failed: %v\n", host.Provider, err)
+				log.Printf("get provider %s failed: %s\n", host.Provider, err)
 				continue
 			}
+			log.Printf("host %s ssl cert is expired, update it Provider %\n", host.Name, host.Provider)
 			var ctx = context.Background()
 			err = provider.UpdateSSL(ctx, host)
 			if err != nil {
